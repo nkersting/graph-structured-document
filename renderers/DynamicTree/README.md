@@ -22,22 +22,22 @@ npm install
 npm start
 ```
 
-This builds the app and serves it at **http://localhost:5000**. Open that address in your browser and the app appears right away.
+This builds the app and serves it at **http://localhost:5050**. Open that address in your browser and the app appears right away.
 
 ### Development mode (live reload)
 
 ```bash
-npx vite --port 5000
+npx vite --port 5050
 ```
 
 ### Make it reachable from other machines on your network
 
 ```bash
 npm run build
-npx vite preview --port 5000 --strictPort --host 0.0.0.0
+npx vite preview --port 5050 --strictPort --host 0.0.0.0
 ```
 
-Then open `http://<server-ip>:5000` from any machine on the network.
+Then open `http://<server-ip>:5050` from any machine on the network.
 
 ### Serve the built files with any web server
 
@@ -45,7 +45,7 @@ Then open `http://<server-ip>:5000` from any machine on the network.
 
 ```nginx
 server {
-  listen 5000;
+  listen 5050;
   root /path/to/presentations/dist;
   location / { try_files $uri /index.html; }
 }
@@ -82,7 +82,7 @@ The default edge format preserves weight, relation and note attributes. Optional
 ## Notes
 
 - AI topic generation and museum collection search use online services, so they need an internet connection. Everything else (viewing, editing, 2D/3D navigation, PowerPoint import) runs locally.
-- Port in use? Change `5000` in the `start` script in `package.json`.
+- Port in use? Change `5050` in the `start` script in `package.json`.
 
 ## Troubleshooting
 
@@ -90,4 +90,4 @@ The default edge format preserves weight, relation and note attributes. Optional
 | --- | --- |
 | `npm install` fails | Update Node.js to 18+ and delete `node_modules` and `package-lock.json`, then retry |
 | Blank page after refresh on nginx/Apache | Add the `index.html` fallback shown above |
-| Port 5000 busy (macOS AirPlay uses it) | Turn off AirPlay Receiver in System Settings, or pick another port |
+| Port 5050 busy | Change the port in the `start` script in `package.json` |
