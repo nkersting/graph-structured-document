@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Python
+__pycache__/
+*.pyc
+
+# Generated license codes (sensitive)
+generated_codes.csv
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Screenshots
+Screenshot*.png
