@@ -13,8 +13,11 @@ Free, self-hosted build. No sign-in, no license key, no access code: start the s
 ```bash
 git clone <your-repo-url> presentations
 cd presentations
+cp .env.example .env
 npm install
 ```
+
+The `.env` file holds the app's Supabase and map settings. Without it the build succeeds but the app shows a blank page.
 
 ## Run
 
