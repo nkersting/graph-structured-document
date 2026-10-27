@@ -240,11 +240,11 @@ export function parseKnowledgeFile<T extends Record<string, any>>(data: T): T {
   }
   if (!data || typeof data !== "object" || !isGraphFormat((data as any).knowledgeTree)) {
     throw new Error(
-      'knowledge.json must use the graph format: "knowledgeTree": { "nodes": {...}, "connections": {...} }',
+      'A knowledge file must use the graph format: "knowledgeTree": { "nodes": {...}, "connections": {...} }',
     );
   }
   const graph = parseKnowledgeGraph((data as any).knowledgeTree);
-  if (!graph) throw new Error("knowledge.json contains an empty knowledgeTree graph");
+  if (!graph) throw new Error("The knowledge file contains an empty knowledgeTree graph");
   return { ...(data as any), knowledgeTree: graphToTree(graph) };
 }
 

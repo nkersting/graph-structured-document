@@ -59,6 +59,19 @@ import { WidgetEditPanel } from "@/components/WidgetEditPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+const DEFAULT_KNOWLEDGE_FILE = "knowledge.json";
+
+// Top-level .json files in a folder, with knowledge.json listed first
+async function listJsonFiles(dir: FileSystemDirectoryHandle): Promise<string[]> {
+  const names: string[] = [];
+  for await (const entry of (dir as any).values()) {
+    if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".json")) names.push(entry.name);
+  }
+  return names.sort((a, b) =>
+    a === DEFAULT_KNOWLEDGE_FILE ? -1 : b === DEFAULT_KNOWLEDGE_FILE ? 1 : a.localeCompare(b),
+  );
+}
+
 function IndexContent() {
   const { initializeDfsTraversal, focusNextNode, focusPreviousNode, setFocusedNodeLabel, setFocusSource, setDfsIndexByLabel, filterTerm, setFilterTerm } = useFocus();
   const [isFilterVisible, setIsFilterVisible] = useState(false);
@@ -96,6 +109,11 @@ function IndexContent() {
   const [selectedNodeLabels, setSelectedNodeLabels] = useState<Set<string>>(new Set());
   const [knowledgeData, setKnowledgeData] = useState<any | null>(null);
   const [dataFolderPath, setDataFolderPath] = useState("");
+  // JSON file inside the data folder that is loaded and that all edits are saved to
+  const [knowledgeFileName, setKnowledgeFileName] = useState(DEFAULT_KNOWLEDGE_FILE);
+  const knowledgeFileNameRef = useRef(DEFAULT_KNOWLEDGE_FILE);
+  // Set when the chosen folder holds several JSON files and the user must pick one
+  const [jsonFileChoice, setJsonFileChoice] = useState<{ handle: FileSystemDirectoryHandle; files: string[] } | null>(null);
   const [sourceFilePath, setSourceFilePath] = useState(() => localStorage.getItem('sourceFilePath') || '');
   const [sourceOnly, setSourceOnly] = useState(() => localStorage.getItem('sourceOnly') === 'true');
   const [sourceFileHandle, setSourceFileHandle] = useState<FileSystemFileHandle | null>(null);
@@ -243,11 +261,17 @@ function IndexContent() {
     await Promise.allSettled(workers);
   }, []);
 
+  const setActiveKnowledgeFile = useCallback((name: string) => {
+    knowledgeFileNameRef.current = name;
+    setKnowledgeFileName(name);
+  }, []);
+
   const setActiveDataFolder = useCallback((handle: FileSystemDirectoryHandle) => {
     setDirHandle(handle);
     setDataFolderPath(handle.name);
     localStorage.setItem('dataFolderPath', handle.name);
-  }, [setDirHandle]);
+    setActiveKnowledgeFile(DEFAULT_KNOWLEDGE_FILE);
+  }, [setDirHandle, setActiveKnowledgeFile]);
 
   const ensureWritableDestinationFolder = useCallback(async () => {
     if (dirHandle) return dirHandle;
@@ -271,14 +295,25 @@ function IndexContent() {
     }
   }, [dirHandle, setActiveDataFolder]);
 
-  // Load knowledge.json from selected data folder
-  const loadFromDataFolder = async (handle: FileSystemDirectoryHandle) => {
+  // Load a knowledge JSON file from the selected data folder. Without a file name, the
+  // folder's JSON files are listed: one is opened directly, several ask the user to choose.
+  const loadFromDataFolder = async (handle: FileSystemDirectoryHandle, fileName?: string) => {
+    if (!fileName) {
+      const jsonFiles = await listJsonFiles(handle);
+      if (jsonFiles.length > 1) {
+        setJsonFileChoice({ handle, files: jsonFiles });
+        return;
+      }
+      fileName = jsonFiles[0] ?? DEFAULT_KNOWLEDGE_FILE;
+    }
+
     // IMPORTANT: set the dir handle first so any initial image resolutions use the correct folder.
     setActiveDataFolder(handle);
+    setActiveKnowledgeFile(fileName);
 
     let data: any;
     try {
-      const fileHandle = await handle.getFileHandle('knowledge.json');
+      const fileHandle = await handle.getFileHandle(fileName);
       const file = await fileHandle.getFile();
       const text = await file.text();
       const raw = JSON.parse(text);
@@ -289,25 +324,25 @@ function IndexContent() {
           const writable = await fileHandle.createWritable();
           await writable.write(serializeKnowledgeData(data));
           await writable.close();
-          toast.info('Upgraded knowledge.json to schema 1.0');
+          toast.info(`Upgraded ${fileName} to schema 1.0`);
         } catch (e) {
-          console.warn('Could not upgrade knowledge.json', e);
+          console.warn(`Could not upgrade ${fileName}`, e);
         }
       }
-      toast.success(`Loaded knowledge.json from ${handle.name}`);
+      toast.success(`Loaded ${fileName} from ${handle.name}`);
     } catch (err: any) {
       if (err.name === 'NotFoundError') {
-        // Create empty knowledge.json in the graph format
+        // Create the missing file as an empty document in the graph format
         const emptyData = emptyKnowledgeDocument();
-        const fileHandle = await handle.getFileHandle('knowledge.json', { create: true });
+        const fileHandle = await handle.getFileHandle(fileName, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(JSON.stringify(emptyData, null, 2));
         await writable.close();
         data = parseKnowledgeFile(emptyData);
-        toast.info(`Created empty knowledge.json in ${handle.name}`);
+        toast.info(`Created empty ${fileName} in ${handle.name}`);
       } else {
-        console.error('Error loading knowledge.json:', err);
-        toast.error(err?.message || 'Failed to load knowledge.json');
+        console.error(`Error loading ${fileName}:`, err);
+        toast.error(err?.message || `Failed to load ${fileName}`);
         return;
       }
 
@@ -618,7 +653,7 @@ function IndexContent() {
         toast.error("No data folder selected");
         return;
       }
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -683,7 +718,7 @@ function IndexContent() {
         toast.error("No data folder selected");
         return;
       }
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -720,7 +755,7 @@ function IndexContent() {
         toast.error("No data folder selected");
         return;
       }
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -773,7 +808,7 @@ function IndexContent() {
         toast.error("No data folder selected");
         return;
       }
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -813,7 +848,7 @@ function IndexContent() {
         toast.error("No data folder selected");
         return;
       }
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -869,7 +904,7 @@ function IndexContent() {
         toast.error("No data folder selected");
         return;
       }
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -902,7 +937,7 @@ function IndexContent() {
       return true;
     }
     try {
-      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(serializeKnowledgeData(updatedData));
       await writable.close();
@@ -1304,15 +1339,15 @@ function IndexContent() {
       const outputDirHandle = pptDestinationDirRef.current ?? dirHandle;
       if (outputDirHandle) {
         try {
-          const fileHandle = await outputDirHandle.getFileHandle('knowledge.json', { create: true });
+          const fileHandle = await outputDirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
           const writable = await fileHandle.createWritable();
           await writable.write(serializeKnowledgeData(finalData));
           await writable.close();
           
           clearImageCache();
           setKnowledgeData(finalData);
-          setGenLogs((prev) => [...prev, `DONE: saved ${nodeCount} topics to ${outputDirHandle.name}/knowledge.json`]);
-          toast.success(`Saved ${nodeCount} topics to ${outputDirHandle.name}/knowledge.json`, { duration: 10000 });
+          setGenLogs((prev) => [...prev, `DONE: saved ${nodeCount} topics to ${outputDirHandle.name}/${knowledgeFileNameRef.current}`]);
+          toast.success(`Saved ${nodeCount} topics to ${outputDirHandle.name}/${knowledgeFileNameRef.current}`, { duration: 10000 });
         } catch (err: any) {
           console.error('Error saving to data folder:', err);
           setGenLogs((prev) => [...prev, `FAILED to save to folder: ${err?.message || err}`]);
@@ -1461,12 +1496,44 @@ function IndexContent() {
     </Dialog>
   );
 
+  const ChooseJsonFileDialog = (
+    <Dialog open={!!jsonFileChoice} onOpenChange={(open) => { if (!open) setJsonFileChoice(null); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Choose a knowledge file</DialogTitle>
+          <DialogDescription>
+            <span className="font-medium">{jsonFileChoice?.handle.name}</span> has several JSON files. Choose the one to open; your edits are saved to it.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+          {jsonFileChoice?.files.map((name) => (
+            <Button
+              key={name}
+              type="button"
+              variant={name === DEFAULT_KNOWLEDGE_FILE ? "default" : "outline"}
+              className="justify-start"
+              onClick={() => {
+                const { handle } = jsonFileChoice;
+                setJsonFileChoice(null);
+                void loadFromDataFolder(handle, name);
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {name}
+            </Button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   // Show empty state if no data loaded
   if (!knowledgeData || !particleData) {
     return (
       <>
-        <SEO title="Knowledge Tree" description="Select a data folder to load knowledge.json" />
+        <SEO title="Knowledge Tree" description="Open a knowledge file to explore" />
         {SaveKnowledgeDialog}
+        {ChooseJsonFileDialog}
         <header className="relative">
           <div className="absolute top-4 left-4 z-50">
             <Sheet>
@@ -1504,12 +1571,12 @@ function IndexContent() {
                   />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="dataFolder">Data Folder Location</Label>
+                    <Label htmlFor="dataFolder">Knowledge File</Label>
                     <div className="flex gap-2">
                       <Input
                         id="dataFolder"
-                        placeholder="Select data folder..."
-                        value={dataFolderPath}
+                        placeholder="Select a folder and knowledge file..."
+                        value={dataFolderPath && `${dataFolderPath}/${knowledgeFileName}`}
                         readOnly
                         className="flex-1"
                       />
@@ -1668,7 +1735,7 @@ function IndexContent() {
                   </Button>
                   <Button className={pressCls} onClick={handleBrowseDataFolder}>
                     <FolderOpen className="h-4 w-4 mr-2" />
-                    Select Data Folder
+                    Open Knowledge File
                   </Button>
                   <Button variant="outline" className={pressCls} onClick={handleConvertPpt} disabled={pptConvertProgress > 0}>
                     <Presentation className="h-4 w-4 mr-2" />
@@ -1715,6 +1782,7 @@ function IndexContent() {
         description={knowledgeData.seo?.description || ""}
       />
       {SaveKnowledgeDialog}
+      {ChooseJsonFileDialog}
       <header className="relative">
         <div className="absolute top-4 left-4 z-50 flex items-center gap-1">
           <Sheet>
@@ -1752,12 +1820,12 @@ function IndexContent() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dataFolder2">Data Folder Location</Label>
+                  <Label htmlFor="dataFolder2">Knowledge File</Label>
                   <div className="flex gap-2">
                     <Input
                       id="dataFolder2"
-                      placeholder="Select data folder..."
-                      value={dataFolderPath}
+                      placeholder="Select a folder and knowledge file..."
+                      value={dataFolderPath && `${dataFolderPath}/${knowledgeFileName}`}
                       readOnly
                       className="flex-1"
                     />
@@ -1872,12 +1940,12 @@ function IndexContent() {
             onClick={async () => {
               if (dirHandle) {
                 clearImageCache();
-                await loadFromDataFolder(dirHandle);
+                await loadFromDataFolder(dirHandle, knowledgeFileNameRef.current);
               } else {
                 toast.error('No data folder selected');
               }
             }}
-            title="Refresh knowledge.json"
+            title={`Reload ${knowledgeFileName}`}
           >
             <RefreshCw className="h-5 w-5" />
           </Button>
@@ -2093,7 +2161,7 @@ function IndexContent() {
                         },
                       };
 
-                      const fileHandle = await dirHandle.getFileHandle('knowledge.json', { create: true });
+                      const fileHandle = await dirHandle.getFileHandle(knowledgeFileNameRef.current, { create: true });
                       const writable = await fileHandle.createWritable();
                       await writable.write(serializeKnowledgeData(updatedData));
                       await writable.close();
