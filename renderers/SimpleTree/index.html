@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple — Graph Structured Document viewer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◇</span>
+      <div>
+        <div class="doc-title" id="docTitle">Simple viewer</div>
+        <div class="doc-sub" id="docSub">Open a knowledge.json to begin</div>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="btn" title="Open a knowledge.json from disk">
+        Open file…
+        <input type="file" id="fileInput" accept=".json,application/json" hidden />
+      </label>
+      <button class="btn ghost" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <div class="settings" id="settings" hidden>
+    <label>
+      Image base for relative paths
+      <input type="text" id="imageBase" spellcheck="false" />
+    </label>
+    <p class="hint">Widget images like <code>/INFORMS/x.png</code> are tried as-is first, then under this base.
+      Leave empty to auto-detect the DynamicTree renderer’s <code>public/</code> folder in this repo.</p>
+  </div>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="search">
+        <input type="search" id="search" placeholder="Search nodes…" autocomplete="off" disabled />
+        <div class="tree-tools">
+          <button class="link" id="collapseAll" disabled>Collapse all</button>
+          <span class="count" id="nodeCount"></span>
+        </div>
+      </div>
+      <div class="tree-wrap" id="treeWrap">
+        <ul class="tree" id="tree" role="tree"></ul>
+        <ul class="results" id="results" hidden></ul>
+      </div>
+    </aside>
+
+    <section class="detail" id="detail">
+      <div class="empty" id="dropZone">
+        <div class="empty-inner">
+          <div class="empty-icon">⤓</div>
+          <p><strong>Drop a knowledge.json here</strong></p>
+          <p class="muted">or use “Open file…” above.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" data-close aria-label="Close">×</button>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
