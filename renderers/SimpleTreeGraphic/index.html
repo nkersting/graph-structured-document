@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimpleTreeGraphic — Graph Structured Document viewer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◇</span>
+      <div>
+        <div class="doc-title" id="docTitle">SimpleTreeGraphic viewer</div>
+        <div class="doc-sub" id="docSub">Open a knowledge.json to begin</div>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="btn" title="Open a knowledge.json from disk">
+        Open file…
+        <input type="file" id="fileInput" accept=".json,application/json" hidden />
+      </label>
+      <button class="btn ghost" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <div class="settings" id="settings" hidden>
+    <label>
+      Image base for relative paths
+      <input type="text" id="imageBase" spellcheck="false" />
+    </label>
+    <p class="hint">Widget images like <code>/INFORMS/x.png</code> are looked up under this folder first.
+      Leave empty to use <code>../DynamicTree/public</code>.</p>
+  </div>
+
+  <main class="layout tree-layout">
+    <section class="tree-pane" id="treePane" tabindex="0" aria-label="Tree: drag to pan, scroll to zoom, click a node to open it">
+      <div class="world" id="world">
+        <svg class="edges" id="edges" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <div class="tree-empty" id="treeEmpty">
+        <div class="empty-inner">
+          <div class="empty-icon">⤓</div>
+          <p><strong>Drop a knowledge.json here</strong></p>
+          <p class="muted">or use “Open file…” above.</p>
+        </div>
+      </div>
+
+      <div class="overlay search-overlay">
+        <input type="search" id="search" placeholder="Search nodes…" autocomplete="off" disabled />
+        <ul class="results" id="results" hidden></ul>
+      </div>
+
+      <div class="overlay zoom-controls" role="group" aria-label="View controls">
+        <button id="zoomIn" title="Zoom in (+)">+</button>
+        <button id="zoomOut" title="Zoom out (−)">−</button>
+        <button id="zoomFit" title="Fit tree to view (0)">⤢</button>
+        <button id="expandLevel" title="Expand one more level">⇣</button>
+        <button id="collapseAll" title="Collapse all">⇡</button>
+      </div>
+
+      <div class="overlay info-overlay">
+        <div class="count" id="nodeCount"></div>
+        <div class="hint">click a node to open it · drag to pan · scroll to zoom · ↑↓←→ to move</div>
+      </div>
+    </section>
+
+    <section class="detail" id="detail">
+      <div class="empty">
+        <div class="empty-inner">
+          <p class="muted">Click a node in the tree to see its details and widgets.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" data-close aria-label="Close">×</button>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
