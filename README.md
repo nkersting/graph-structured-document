@@ -31,7 +31,7 @@ knowledge.json
 │   │   ├── name
 │   │   ├── weight
 │   │	├── description
-│   │	├── icon
+│   │	├── icon (optional)
 │   │   ├── position (optional)
 │   │   ├── content[]
 │   │   │   ├── id
@@ -41,8 +41,8 @@ knowledge.json
 │   │   │   └── type-specific properties
 │   │   │        ├──title
 │   │   │        ├──notes
-│   │   │        ├──source url
-│   │   │        └──icon
+│   │   │        ├──source url (optional)
+│   │   │        └──icon (optional)
 │   │   └── hints (optional)
 │   └── edges{}
 │       ├── key: source
